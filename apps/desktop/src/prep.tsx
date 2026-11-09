@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { ChangeEvent, FormEvent, ReactNode } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { Empty, Icon } from "./components";
+import { syncSelectedSources } from "./selection";
 
 // Mirrors copilot_core::prep (serde snake_case).
 export type DocKind = "resume" | "job_description" | "project_note" | "manual";
@@ -148,8 +149,11 @@ export function PreparePage({ prep, enabled, aiReady, review, startPractice, pre
   const [sources, setSources] = useState<string[]>([]);
   const [community, setCommunity] = useState<string[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
+  const seenSources = useRef(new Set<string>());
   useEffect(() => { if (presetCommunity) setCommunity(current => current.includes(presetCommunity) ? current : [...current, presetCommunity]); }, [presetCommunity]);
-  useEffect(() => { if (data) setSources(current => current.length ? current.filter(id => data.sources.some(s => s.id === id)) : data.sources.map(s => s.id)); }, [data?.sources.length]);
+  useEffect(() => {
+    if (data) setSources(current => syncSelectedSources(current, data.sources.map(s => s.id), seenSources.current));
+  }, [data?.sources.length]);
   const pack = data?.packs.find(p => p.id === (selected ?? data?.packs[0]?.id)) ?? null;
   const unreviewed = data?.claims.filter(c => c.state === "extracted_unreviewed").length ?? 0;
 
